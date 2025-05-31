@@ -17,6 +17,8 @@ public class LoginService {
     private final RoleRepository roleRepository;
     private final RolePrivilegeRepository rolePrivilegeRepository;
     private final PrivilegeRepository privilegeRepository;
+    private final JwtService jwtService;
+
 
     public Map<String, Object> verifyAndRespond(String email, String otp) {
         // 1. Find the latest OTP entry
@@ -27,9 +29,17 @@ public class LoginService {
         OtpVerification otpVerification = otpOpt.get();
 
         // 2. Check OTP validity
-        if (otpVerification.isVerified() ||
-            !otpVerification.getOtp().equals(otp) ||
-            otpVerification.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (otpVerification.isVerified() || otpVerification.getExpiresAt().isBefore(LocalDateTime.now())) {
+            return null;
+        }
+
+        if (otpVerification.getAttemptCount() >= 5) {
+            return null; // Too many failed attempts
+        }
+
+        if (!otpVerification.getOtp().equals(otp)) {
+            otpVerification.setAttemptCount(otpVerification.getAttemptCount() + 1);
+            otpVerificationRepository.save(otpVerification);
             return null;
         }
 
@@ -68,6 +78,16 @@ public class LoginService {
         response.put("privileges", privileges);
         response.put("navigate_to", role.getNavigateTo());
 
+	     // 8. Generate JWT
+	     Map<String, Object> claims = new HashMap<>();
+	     claims.put("user_id", user.getUserId());
+	     claims.put("email", user.getEmail());
+	     claims.put("role", role.getRoleName());
+	     claims.put("privileges", privileges);
+	
+	     String token = jwtService.generateToken(email, claims);
+	     response.put("token", token);
+	     
         return response;
     }
 }

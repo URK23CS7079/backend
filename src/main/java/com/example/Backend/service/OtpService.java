@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.security.SecureRandom;
 
+//import java.security.MessageDigest;
+//import java.security.NoSuchAlgorithmException;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +46,7 @@ public class OtpService {
         Optional<OtpVerification> existingOtp = otpVerificationRepository.findTopByEmailOrderByCreatedAtDesc(email);
         if (existingOtp.isPresent()) {
             OtpVerification latest = existingOtp.get();
-            if (!latest.isVerified() && latest.getExpiresAt().isAfter(LocalDateTime.now())) {
+            if (!latest.isVerified() && latest.getExpiresAt().isAfter(LocalDateTime.now()) && latest.getAttemptCount() < 5) {
                 // Valid OTP already sent
                 return true; // Or return false depending on behavior you want
             }
@@ -83,4 +85,22 @@ public class OtpService {
         message.setText("Your OTP is: " + otp + "\n\nIt will expire in 5 minutes.");
         mailSender.send(message);
     }
+    
+//    // Helper: Opt hashing
+//    private String hashOtp(String otp) {
+//        try {
+//            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+//            byte[] hash = digest.digest(otp.getBytes());
+//            StringBuilder hexString = new StringBuilder();
+//            for (byte b : hash) {
+//                String hex = Integer.toHexString(0xff & b);
+//                if (hex.length() == 1) hexString.append('0');
+//                hexString.append(hex);
+//            }
+//            return hexString.toString();
+//        } catch (NoSuchAlgorithmException e) {
+//            throw new RuntimeException("Error hashing OTP", e);
+//        }
+//    }
+
 }
