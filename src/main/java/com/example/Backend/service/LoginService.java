@@ -85,9 +85,12 @@ public class LoginService {
 	     claims.put("role", role.getRoleName());
 	     claims.put("privileges", privileges);
 	
-	     String token = jwtService.generateToken(email, claims);
-	     response.put("token", token);
-	     
+	     String accessToken = jwtService.generateAccessToken(email, claims);
+	     String refreshToken = jwtService.generateRefreshToken(email);
+
+	     response.put("access_token", accessToken);
+	     response.put("refresh_token", refreshToken);
+
         return response;
     }
 }
