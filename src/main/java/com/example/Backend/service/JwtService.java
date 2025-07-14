@@ -77,11 +77,12 @@ public class JwtService {
             throw new RuntimeException("Invalid JWT token", e);
         }
     }
-
+    
     public String extractSubject(String token) {
         return Jwts.parser().verifyWith(key).build()
                 .parseSignedClaims(token)
                 .getPayload()
                 .getSubject();
     }
+
 }
