@@ -3,6 +3,7 @@ package com.example.Backend.controller;
 import com.example.Backend.service.SuperAdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/superadmin")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('SUPER_ADMIN')") // ✅ Applies to all methods in this class
 public class SuperAdminController {
 
     private final SuperAdminService superAdminService;

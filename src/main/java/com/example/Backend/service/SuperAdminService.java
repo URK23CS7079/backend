@@ -26,9 +26,24 @@ public class SuperAdminService {
 
         if (roleOpt.isEmpty() || privOpt.isEmpty()) return false;
 
-        boolean exists = rolePrivilegeRepository.existsByRoleRoleIdAndPrivilegePrivilegeId(roleId, privilegeId);
-        if (exists) return false;
+        Optional<RolePrivilege> existingOpt =
+                rolePrivilegeRepository.findByRoleRoleIdAndPrivilegePrivilegeId(roleId, privilegeId);
 
+        if (existingOpt.isPresent()) {
+            RolePrivilege existing = existingOpt.get();
+
+            if (existing.getIsActive()) {
+                return false; // Already active
+            } else {
+                // Reactivate if previously removed
+                existing.setIsActive(true);
+                existing.setUpdatedAt(LocalDateTime.now());
+                rolePrivilegeRepository.save(existing);
+                return true;
+            }
+        }
+
+        // If not exists at all, create new
         RolePrivilege rp = RolePrivilege.builder()
                 .role(roleOpt.get())
                 .privilege(privOpt.get())

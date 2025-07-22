@@ -74,7 +74,7 @@ public class LoginService {
         response.put("name", user.getName());
         response.put("email", user.getEmail());
         response.put("phone_number", user.getPhoneNumber());
-        response.put("role", role.getRoleName().toLowerCase());
+        response.put("role", role.getRoleName().toUpperCase());
         response.put("privileges", privileges);
         response.put("navigate_to", role.getNavigateTo());
 
@@ -82,7 +82,7 @@ public class LoginService {
 	     Map<String, Object> claims = new HashMap<>();
 	     claims.put("user_id", user.getUserId());
 	     claims.put("email", user.getEmail());
-	     claims.put("role", role.getRoleName());
+	     claims.put("role", role.getRoleName().toUpperCase());
 	     claims.put("privileges", privileges);
 	
 	     String accessToken = jwtService.generateAccessToken(email, claims);
@@ -90,7 +90,7 @@ public class LoginService {
 
 	     response.put("access_token", accessToken);
 	     response.put("refresh_token", refreshToken);
-
+	     
         return response;
     }
 }

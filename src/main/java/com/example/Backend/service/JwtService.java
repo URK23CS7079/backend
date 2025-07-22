@@ -66,7 +66,7 @@ public class JwtService {
         }
     }
 
-    private Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(String token) {
         try {
             return Jwts.parser()
                     .verifyWith(key)
