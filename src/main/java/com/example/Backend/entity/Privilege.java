@@ -18,7 +18,7 @@ public class Privilege {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long privilegeId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String privilegeName;
 
     @Column(nullable = false)

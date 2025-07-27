@@ -53,11 +53,5 @@ public class LoginController {
 
         return ResponseEntity.ok(response);
     }
-    
-    //3. Crons response
-    @GetMapping("/hi")
-    public ResponseEntity<String> sayHi() {
-        return ResponseEntity.ok("hi");
-    }
 }
 
