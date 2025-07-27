@@ -1,6 +1,6 @@
 package com.example.Backend.controller;
 
-import com.example.Backend.service.SuperAdminService;
+import com.example.Backend.service.RolePrivilegeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -9,19 +9,19 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/superadmin")
+@RequestMapping("/role-privileges")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('SUPER_ADMIN')") // ✅ Applies to all methods in this class
-public class SuperAdminController {
+@PreAuthorize("hasAuthority('manage:roles')") // ✅ Now based on privilege, not role
+public class RolePrivilegeController {
 
-    private final SuperAdminService superAdminService;
+    private final RolePrivilegeService rolePrivilegeService;
 
-    @PostMapping("/assign-privilege")
+    @PostMapping("/assign")
     public ResponseEntity<?> assignPrivilege(@RequestBody Map<String, Long> request) {
         Long roleId = request.get("role_id");
         Long privilegeId = request.get("privilege_id");
 
-        boolean success = superAdminService.assignPrivilegeToRole(roleId, privilegeId);
+        boolean success = rolePrivilegeService.assignPrivilegeToRole(roleId, privilegeId);
         if (success) {
             return ResponseEntity.ok("Privilege assigned successfully.");
         } else {
@@ -29,12 +29,12 @@ public class SuperAdminController {
         }
     }
 
-    @PostMapping("/remove-privilege")
+    @PostMapping("/remove")
     public ResponseEntity<?> removePrivilege(@RequestBody Map<String, Long> request) {
         Long roleId = request.get("role_id");
         Long privilegeId = request.get("privilege_id");
 
-        boolean success = superAdminService.removePrivilegeFromRole(roleId, privilegeId);
+        boolean success = rolePrivilegeService.removePrivilegeFromRole(roleId, privilegeId);
         if (success) {
             return ResponseEntity.ok("Privilege removed successfully.");
         } else {

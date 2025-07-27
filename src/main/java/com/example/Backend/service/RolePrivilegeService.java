@@ -14,7 +14,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class SuperAdminService {
+public class RolePrivilegeService {
 
     private final RoleRepository roleRepository;
     private final PrivilegeRepository privilegeRepository;

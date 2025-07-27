@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -44,12 +43,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+//        Claims claims = jwtService.extractAllClaims(token);
+//        String email = claims.getSubject();
+//        String role = (String) claims.get("role"); // e.g., "SUPER_ADMIN"
+//
+//        List<SimpleGrantedAuthority> authorities =
+//                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
+        
         Claims claims = jwtService.extractAllClaims(token);
         String email = claims.getSubject();
-        String role = (String) claims.get("role"); // e.g., "SUPER_ADMIN"
 
-        List<SimpleGrantedAuthority> authorities =
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
+        @SuppressWarnings("unchecked")
+        List<String> privileges = (List<String>) claims.get("privileges");
+        List<SimpleGrantedAuthority> authorities = privileges.stream()
+                .map(SimpleGrantedAuthority::new)
+                .toList();
 
         UsernamePasswordAuthenticationToken authenticationToken =
                 new UsernamePasswordAuthenticationToken(email, null, authorities);
@@ -57,5 +65,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(authenticationToken);
 
         filterChain.doFilter(request, response);
+
     }
 }
