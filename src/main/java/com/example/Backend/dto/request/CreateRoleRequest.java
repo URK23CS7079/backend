@@ -3,8 +3,7 @@ package com.example.Backend.dto.request;
 import lombok.Data;
 
 @Data
-public class UpdateRoleRequest {
-    private Long roleId;
+public class CreateRoleRequest {
     private String roleName;
     private String navigateTo;
 }

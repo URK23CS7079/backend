@@ -3,6 +3,7 @@ package com.example.Backend.service;
 import com.example.Backend.entity.Privilege;
 import com.example.Backend.entity.Role;
 import com.example.Backend.entity.RolePrivilege;
+import com.example.Backend.exception.ResourceNotFoundException;
 import com.example.Backend.repository.PrivilegeRepository;
 import com.example.Backend.repository.RolePrivilegeRepository;
 import com.example.Backend.repository.RoleRepository;
@@ -10,15 +11,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.example.Backend.dto.RoleDTO;
 import com.example.Backend.dto.request.UpdateRoleRequest;
-import com.example.Backend.dto.CreateRoleRequest;
+import com.example.Backend.dto.request.CreateRoleRequest;
 
-
-import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class RolePrivilegeService {
@@ -26,6 +26,21 @@ public class RolePrivilegeService {
     private final RoleRepository roleRepository;
     private final PrivilegeRepository privilegeRepository;
     private final RolePrivilegeRepository rolePrivilegeRepository;
+
+    public Map<String, Object> getRolePrivilegeById(Long id) {
+        RolePrivilege rp = rolePrivilegeRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Role-Privilege association not found with id: " + id));
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("role_privilege_id", rp.getRolePrivilegeId());
+        map.put("role_id", rp.getRole().getRoleId());
+        map.put("privilege_id", rp.getPrivilege().getPrivilegeId());
+        map.put("is_active", rp.getIsActive());
+        map.put("created_at", rp.getCreatedAt());
+        map.put("updated_at", rp.getUpdatedAt());
+
+        return map;
+    }
 
     public boolean assignPrivilegeToRole(Long roleId, Long privilegeId) {
         Optional<Role> roleOpt = roleRepository.findById(roleId);
@@ -42,7 +57,6 @@ public class RolePrivilegeService {
             if (existing.getIsActive()) {
                 return false; // Already active
             } else {
-                // Reactivate if previously removed
                 existing.setIsActive(true);
                 existing.setUpdatedAt(LocalDateTime.now());
                 rolePrivilegeRepository.save(existing);
@@ -50,8 +64,7 @@ public class RolePrivilegeService {
             }
         }
 
-        // If not exists at all, create new
-        RolePrivilege rp = RolePrivilege.builder()
+        RolePrivilege newAssociation = RolePrivilege.builder()
                 .role(roleOpt.get())
                 .privilege(privOpt.get())
                 .isActive(true)
@@ -59,7 +72,7 @@ public class RolePrivilegeService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        rolePrivilegeRepository.save(rp);
+        rolePrivilegeRepository.save(newAssociation);
         return true;
     }
 
@@ -76,25 +89,76 @@ public class RolePrivilegeService {
         return true;
     }
     
+    public List<Map<String, Object>> getAllRolePrivileges() {
+        return rolePrivilegeRepository.findAll().stream()
+                .map(rp -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("role_privilege_id", rp.getRolePrivilegeId());
+                    map.put("role_id", rp.getRole().getRoleId());
+                    map.put("privilege_id", rp.getPrivilege().getPrivilegeId());
+                    map.put("is_active", rp.getIsActive());
+                    map.put("created_at", rp.getCreatedAt());
+                    map.put("updated_at", rp.getUpdatedAt());
+                    return map;
+                }).toList();
+    }
+    
+    public boolean softDeleteRolePrivilegeById(Long id) {
+        Optional<RolePrivilege> rpOpt = rolePrivilegeRepository.findById(id);
+        if (rpOpt.isEmpty()) return false;
+
+        RolePrivilege rp = rpOpt.get();
+        if (!rp.getIsActive()) return false;
+
+        rp.setIsActive(false);
+        rp.setUpdatedAt(LocalDateTime.now());
+        rolePrivilegeRepository.save(rp);
+        return true;
+    }
+    public List<Map<String, Object>> getPrivilegesWithAssignmentStatus(Long roleId) {
+        List<Privilege> allPrivileges = privilegeRepository.findAllByIsActiveTrue();
+
+        // Get active privilege IDs assigned to this role
+        List<Long> assignedPrivilegeIds = rolePrivilegeRepository
+                .findByRoleRoleIdAndIsActiveTrue(roleId)
+                .stream()
+                .map(rp -> rp.getPrivilege().getPrivilegeId())
+                .toList();
+
+        // Map each privilege with assigned status
+        return allPrivileges.stream().map(privilege -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("privilegeId", privilege.getPrivilegeId());
+            map.put("privilegeName", privilege.getPrivilegeName());
+            map.put("isAssigned", assignedPrivilegeIds.contains(privilege.getPrivilegeId()));
+            return map;
+        }).toList();
+    }
+
+    
     public List<RoleDTO> getAllRoles() {
         return roleRepository.findAll().stream()
-                .filter(Role::getIsActive)
-                .map(role -> new RoleDTO(
-                        role.getRoleId(),
-                        role.getRoleName(),
-                        role.getNavigateTo()
-                ))
-                .collect(Collectors.toList());
+        		.filter(Role::getIsActive)
+                .map(role -> new RoleDTO(role.getRoleId(), role.getRoleName(), role.getNavigateTo()))
+                .toList();
     }
-        
-    public boolean createRole(CreateRoleRequest request) {
-        if (request.getRoleName() == null || request.getNavigateTo() == null ||
-            request.getRoleName().isBlank() || request.getNavigateTo().isBlank()) {
-            return false;
-        }
+    public Map<String, Object> getRoleById(Long id) {
+        Role role = roleRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Role not found with id: " + id));
 
+        Map<String, Object> map = new HashMap<>();
+        map.put("role_id", role.getRoleId());
+        map.put("role_name", role.getRoleName());
+        map.put("is_active", role.getIsActive());
+        map.put("navigate_to", role.getNavigateTo());
+        map.put("created_at", role.getCreatedAt());
+        map.put("updated_at", role.getUpdatedAt());
+
+        return map;
+    }
+    public RoleDTO createRoleAndReturn(CreateRoleRequest request) {
         boolean exists = roleRepository.existsByRoleNameIgnoreCase(request.getRoleName());
-        if (exists) return false;
+        if (exists) return null;
 
         Role role = Role.builder()
                 .roleName(request.getRoleName())
@@ -104,83 +168,107 @@ public class RolePrivilegeService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
+        Role saved = roleRepository.save(role);
+        return new RoleDTO(saved.getRoleId(), saved.getRoleName(), saved.getNavigateTo());
+    }
+
+    public boolean updateRole(UpdateRoleRequest updateRequest) {
+        Optional<Role> roleOptional = roleRepository.findById(updateRequest.getRoleId());
+        if (roleOptional.isEmpty()) return false;
+
+        Role role = roleOptional.get();
+        role.setRoleName(updateRequest.getRoleName());
+        role.setNavigateTo(updateRequest.getNavigateTo());
+        role.setUpdatedAt(LocalDateTime.now());
+
         roleRepository.save(role);
         return true;
     }
-    public boolean updateRole(UpdateRoleRequest request) {
-        if (request.getRoleId() == null || 
-            request.getRoleName() == null || 
-            request.getNavigateTo() == null || 
-            request.getRoleName().isBlank() || 
-            request.getNavigateTo().isBlank()) {
+
+    public boolean deleteRole(Long roleId) {
+        Optional<Role> roleOptional = roleRepository.findById(roleId);
+        if (roleOptional.isEmpty()) return false;
+
+        Role role = roleOptional.get();
+        role.setIsActive(false); // soft delete
+        role.setUpdatedAt(LocalDateTime.now());
+        roleRepository.save(role);
+        return true;
+    }
+
+    public List<Map<String, Object>> getAllPrivileges() {
+        return privilegeRepository.findAllByIsActiveTrue().stream()
+                .map(privilege -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("privilegeId", privilege.getPrivilegeId());
+                    map.put("privilegeName", privilege.getPrivilegeName());
+                    return map;
+                }).toList();
+    }
+    public Map<String, Object> getPrivilegeById(Long id) {
+        Privilege privilege = privilegeRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Privilege not found with id: " + id));
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("privilege_id", privilege.getPrivilegeId());
+        map.put("privilege_name", privilege.getPrivilegeName());
+        map.put("is_active", privilege.getIsActive());
+        map.put("created_at", privilege.getCreatedAt());
+        map.put("updated_at", privilege.getUpdatedAt());
+
+        return map;
+    }
+    public boolean createPrivilege(String privilegeName) {
+        if (privilegeRepository.existsByPrivilegeNameIgnoreCase(privilegeName)) {
             return false;
         }
 
-        Optional<Role> opt = roleRepository.findById(request.getRoleId());
-        if (opt.isEmpty()) return false;
+        Privilege newPrivilege = Privilege.builder()
+                .privilegeName(privilegeName)
+                .isActive(true)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
 
-        Role role = opt.get();
-        role.setRoleName(request.getRoleName());
-        role.setNavigateTo(request.getNavigateTo());
-        role.setUpdatedAt(LocalDateTime.now());
-
-        roleRepository.save(role);
+        privilegeRepository.save(newPrivilege);
         return true;
     }
-    public boolean removeRole(Long roleId) {
-        Optional<Role> opt = roleRepository.findById(roleId);
-        if (opt.isEmpty()) return false;
-
-        Role role = opt.get();
-        if (!role.getIsActive()) return false;
-
-        role.setIsActive(false);
-        role.setUpdatedAt(LocalDateTime.now());
-        roleRepository.save(role);
-        return true;
-    }
-    public List<Map<String, Object>> getAllPrivileges() {
-        List<Privilege> privileges = privilegeRepository.findAllByIsActiveTrue();
-
-        return privileges.stream().map(p -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("privilege_id", p.getPrivilegeId());
-            map.put("privilege_name", p.getPrivilegeName());
-            return map;
-        }).collect(Collectors.toList());
-    }
-    public boolean deletePrivilege(Long privilegeId) {
-        Optional<Privilege> optionalPrivilege = privilegeRepository.findById(privilegeId);
-        if (optionalPrivilege.isEmpty()) return false;
-
-        Privilege privilege = optionalPrivilege.get();
-        if (!privilege.getIsActive()) return false;
-
-        privilege.setIsActive(false);
-        privilege.setUpdatedAt(LocalDateTime.now());
-        privilegeRepository.save(privilege);
-        return true;
-    }
-    public boolean updatePrivilege(Long id, String newPrivilegeName) {
-        if (newPrivilegeName == null || newPrivilegeName.isBlank()) return false;
-
+    public boolean updatePrivilege(Long id, String newName) {
         Optional<Privilege> optionalPrivilege = privilegeRepository.findById(id);
-        if (optionalPrivilege.isEmpty()) return false;
 
-        Privilege privilege = optionalPrivilege.get();
+        if (optionalPrivilege.isPresent()) {
+            Privilege privilege = optionalPrivilege.get();
+            if (!privilege.getIsActive()) {
+                return false;
+            }
+            // Prevent duplicate names
+            if (privilegeRepository.existsByPrivilegeNameIgnoreCase(newName)) {
+                return false;
+            }
+            privilege.setPrivilegeName(newName);
+            privilege.setUpdatedAt(LocalDateTime.now());
+            privilegeRepository.save(privilege);
+            return true;
+        }
 
-        // If name is unchanged, do nothing
-        if (privilege.getPrivilegeName().equalsIgnoreCase(newPrivilegeName)) return false;
+        return false;
+    }
+    public boolean deletePrivilege(Long id) {
+        Optional<Privilege> optionalPrivilege = privilegeRepository.findById(id);
 
-        // Check for duplicate name
-        boolean exists = privilegeRepository.existsByPrivilegeNameIgnoreCase(newPrivilegeName);
-        if (exists) return false;
+        if (optionalPrivilege.isPresent()) {
+            Privilege privilege = optionalPrivilege.get();
 
-        privilege.setPrivilegeName(newPrivilegeName);
-        privilege.setUpdatedAt(LocalDateTime.now());
+            if (!privilege.getIsActive()) {
+                return false; // already deleted
+            }
+            privilege.setIsActive(false);
+            privilege.setUpdatedAt(LocalDateTime.now());
+            privilegeRepository.save(privilege);
+            return true;
+        }
 
-        privilegeRepository.save(privilege);
-        return true;
+        return false; // not found
     }
 
 
