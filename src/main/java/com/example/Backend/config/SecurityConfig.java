@@ -31,6 +31,7 @@ public class SecurityConfig {
                         .requestMatchers("/login/**").permitAll()
                         .requestMatchers("/superadmin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/role-privileges/**").hasAuthority("manage:roles")
+                        .requestMatchers("/college/**").hasAuthority("manage:college")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
